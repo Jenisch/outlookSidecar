@@ -6,7 +6,7 @@ import importlib
 import importlib.util
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Iterator, Optional
+from typing import Iterable, Iterator, List, Optional
 
 from .models import EmailMessage
 
@@ -18,8 +18,14 @@ class LocalMessageLoader:
     path: str
 
     def iter_messages(self) -> Iterator[EmailMessage]:
-        with open(self.path, "r", encoding="utf-8") as handler:
-            yield EmailMessage(subject=self.path, body=handler.read())
+        try:
+            with open(self.path, "r", encoding="utf-8") as handler:
+                yield EmailMessage(subject=self.path, body=handler.read())
+        except PermissionError as exc:
+            raise PermissionError(
+                "Unable to read the selected file. If this is an Outlook PST/OST file, "
+                "close Outlook and export the required emails to a text file instead."
+            ) from exc
 
 
 class OutlookEmailReader:
@@ -40,41 +46,22 @@ class OutlookEmailReader:
         self._namespace = self._resolve_namespace()
 
     def iter_messages(self) -> Iterator[EmailMessage]:
-        folder = self._resolve_folder()
-        items = folder.Items
-        items.Sort("[ReceivedTime]", True)
-
+        folders = self._resolve_folders()
         cutoff = None
         if self.restrict_days is not None:
             cutoff = datetime.now() - timedelta(days=self.restrict_days)
 
-        count = 0
-        item = items.GetFirst()
-        while item:
-            # ``Class`` 43 identifies mail items.  Other classes (meeting
-            # requests, tasks, etc.) do not expose ``Body``/``Subject`` in the
-            # same way and should be skipped.
-            item_class = getattr(item, "Class", None)
-            if item_class and int(item_class) != 43:
-                item = items.GetNext()
-                continue
+        messages: List[EmailMessage] = []
+        for folder in folders:
+            messages.extend(self._iter_folder(folder, cutoff))
 
-            received_time = getattr(item, "ReceivedTime", None)
+        messages.sort(key=lambda msg: msg.received or datetime.min, reverse=True)
 
-            if cutoff and received_time and received_time < cutoff:
-                break
+        if self.limit is not None:
+            messages = messages[: self.limit]
 
-            yield EmailMessage(
-                subject=str(getattr(item, "Subject", "")),
-                body=str(getattr(item, "Body", "")),
-                received=received_time if isinstance(received_time, datetime) else None,
-            )
-
-            count += 1
-            if self.limit and count >= self.limit:
-                break
-
-            item = items.GetNext()
+        for message in messages:
+            yield message
 
     def _resolve_namespace(self):  # type: ignore[override]
         spec = importlib.util.find_spec("win32com.client")
@@ -88,41 +75,118 @@ class OutlookEmailReader:
         application = win32com_client.Dispatch("Outlook.Application")
         return application.GetNamespace("MAPI")
 
-    def _resolve_folder(self):  # type: ignore[override]
-        path_segments = [segment.strip() for segment in self.folder_path.split("/") if segment.strip()]
+    def _resolve_folders(self):  # type: ignore[override]
+        path_segments = [segment.strip() for segment in _split_folder_path(self.folder_path) if segment.strip()]
         if not path_segments:
             raise ValueError("folder_path must not be empty")
 
-        inbox = self._namespace.GetDefaultFolder(6)
-        folder = inbox
+        stores = list(_iter_namespace_roots(self._namespace))
 
-        if path_segments[0].lower() != "inbox":
-            roots = {}
-            for i in range(self._namespace.Folders.Count):
-                folder_obj = self._namespace.Folders.Item(i + 1)
-                roots[folder_obj.Name] = folder_obj
-            lookup = {name.lower(): name for name in roots}
-            first_segment = path_segments[0].lower()
-            if first_segment not in lookup:
-                raise ValueError(
-                    f"Could not find top-level folder '{path_segments[0]}'. Available: {', '.join(roots.keys())}"
-                )
-            folder = roots[lookup[first_segment]]
+        first_segment = path_segments[0].lower()
+        matching_stores = []
+        if any(store.name.lower() == first_segment for store in stores):
+            for store in stores:
+                if store.name.lower() == first_segment:
+                    matching_stores.append(store)
             path_segments = path_segments[1:]
+            if not path_segments:
+                path_segments = ["Inbox"]
         else:
-            path_segments = path_segments[1:]
+            matching_stores = list(stores)
 
-        for segment in path_segments:
-            child_map = {}
-            for i in range(folder.Folders.Count):
-                child = folder.Folders.Item(i + 1)
-                child_map[child.Name] = child
-            lookup = {name.lower(): name for name in child_map}
-            segment_key = segment.lower()
-            if segment_key not in lookup:
-                raise ValueError(
-                    f"Folder '{segment}' not found under '{folder.Name}'. Available: {', '.join(child_map.keys())}"
+        folders = []
+        for store in matching_stores:
+            try:
+                folder = _walk_segments(store.folder, path_segments)
+            except ValueError:
+                continue
+            if folder not in folders:
+                folders.append(folder)
+
+        if not folders:
+            available = ", ".join(store.name for store in stores)
+            raise ValueError(
+                f"Unable to locate the Outlook folder '{self.folder_path}'. Available top-level stores: {available}"
+            )
+
+        return folders
+
+    def _iter_folder(self, folder, cutoff: Optional[datetime]) -> List[EmailMessage]:
+        items = folder.Items
+        items.Sort("[ReceivedTime]", True)
+
+        messages: List[EmailMessage] = []
+        item = items.GetFirst()
+        while item:
+            item_class = getattr(item, "Class", None)
+            if item_class and int(item_class) != 43:
+                item = items.GetNext()
+                continue
+
+            received_time = getattr(item, "ReceivedTime", None)
+
+            if cutoff and received_time and received_time < cutoff:
+                break
+
+            messages.append(
+                EmailMessage(
+                    subject=str(getattr(item, "Subject", "")),
+                    body=str(getattr(item, "Body", "")),
+                    received=received_time if isinstance(received_time, datetime) else None,
                 )
-            folder = child_map[lookup[segment_key]]
+            )
 
-        return folder
+            item = items.GetNext()
+
+        return messages
+
+
+def _split_folder_path(path: str) -> List[str]:
+    parts = []
+    current = []
+    for char in path:
+        if char in {"/", "\\"}:
+            segment = "".join(current).strip()
+            if segment:
+                parts.append(segment)
+            current = []
+        else:
+            current.append(char)
+    segment = "".join(current).strip()
+    if segment:
+        parts.append(segment)
+    return parts
+
+
+class _NamespaceStore:
+    __slots__ = ("name", "folder")
+
+    def __init__(self, name, folder) -> None:
+        self.name = name
+        self.folder = folder
+
+
+def _iter_namespace_roots(namespace) -> Iterable[_NamespaceStore]:
+    for index in range(namespace.Folders.Count):
+        folder_obj = namespace.Folders.Item(index + 1)
+        yield _NamespaceStore(folder_obj.Name, folder_obj)
+
+
+def _walk_segments(folder, segments: List[str]):
+    current = folder
+    remaining = list(segments)
+    if not remaining:
+        return current
+
+    for segment in remaining:
+        child_map = {}
+        for i in range(current.Folders.Count):
+            child = current.Folders.Item(i + 1)
+            child_map[child.Name] = child
+        lookup = {name.lower(): name for name in child_map}
+        segment_key = segment.lower()
+        if segment_key not in lookup:
+            raise ValueError(f"Folder '{segment}' not found under '{current.Name}'.")
+        current = child_map[lookup[segment_key]]
+
+    return current

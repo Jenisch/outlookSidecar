@@ -41,9 +41,13 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
 `launch_outlook_sidecar.bat` betiği çalıştırıldıktan sonra açılan arayüz üzerinden:
 
 - `Microsoft Outlook` seçeneği ile yerel Outlook kurulumuna bağlanabilir, klasör yolunu, kaç günlük veri alınacağını ve
-  isteğe bağlı mesaj limitini belirleyebilirsiniz. Gün aralığını `0` yaparsanız tarih filtresi devre dışı kalır ve klasördeki
-  tüm mailler taranır.
-- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz.
+  isteğe bağlı mesaj limitini belirleyebilirsiniz. Klasör yolu hem eğik çizgi (`Inbox/On Call`) hem de ters eğik çizgi
+  (`Inbox\On Call`) kullanılarak yazılabilir. Yalnızca `Inbox` bırakırsanız uygulama erişebildiği tüm gelen kutularını
+  (paylaşılan posta kutuları dahil) tarar. Belirli bir posta kutusuna inmek için Outlook tarafındaki mağaza adını öne
+  ekleyebilirsiniz (ör. `ops@company.com/Inbox/On Call`).
+- Gün aralığını `0` yaparsanız tarih filtresi devre dışı kalır ve klasördeki tüm mailler taranır.
+- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz. Outlook veri dosyaları
+  (`.pst/.ost`) Outlook açıkken kilitli olduğu için doğrudan okunamaz; önce ilgili içerikleri metin dosyasına aktarın.
 - `Load Cases` butonuna basarak mailleri ayrıştırabilir, listeden vaka seçip detayları inceleyebilirsiniz. Durum çubuğundaki
   mesaj, kaç mail işlendiğini ve kaç benzersiz vaka bulunduğunu gösterir.
 
