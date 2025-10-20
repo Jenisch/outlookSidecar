@@ -257,3 +257,7 @@ def main() -> None:
 
 
 __all__ = ["OutlookSidecarApp", "main"]
+
+
+if __name__ == "__main__":  # pragma: no cover - manual GUI launch
+    main()
