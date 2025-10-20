@@ -32,7 +32,10 @@ class OutlookEmailReader:
         limit: Optional[int] = None,
     ) -> None:
         self.folder_path = folder_path
-        self.restrict_days = restrict_days
+        if restrict_days is None or (isinstance(restrict_days, int) and restrict_days > 0):
+            self.restrict_days = restrict_days
+        else:
+            self.restrict_days = None
         self.limit = limit
         self._namespace = self._resolve_namespace()
 

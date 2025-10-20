@@ -9,6 +9,8 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
 - JSON veya biçimlendirilmiş metin halinde rapor üretir.
 - Geliştirme ve test için basit metin dosyalarından veri okuma imkânı sunar.
 - Outlook’a bağlanmaya gerek kalmadan aynı bilgileri içeren kullanıcı dostu bir arayüz sağlar.
+- Aynı vaka numarası için gelen birden çok maili birleştirerek en güncel bilgiyi tek satırda gösterir, eski maillerdeki
+  eksik uçuş veya açıklama satırlarını da saklar.
 
 ## Kurulum
 
@@ -39,9 +41,11 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
 `launch_outlook_sidecar.bat` betiği çalıştırıldıktan sonra açılan arayüz üzerinden:
 
 - `Microsoft Outlook` seçeneği ile yerel Outlook kurulumuna bağlanabilir, klasör yolunu, kaç günlük veri alınacağını ve
-  isteğe bağlı mesaj limitini belirleyebilirsiniz.
+  isteğe bağlı mesaj limitini belirleyebilirsiniz. Gün aralığını `0` yaparsanız tarih filtresi devre dışı kalır ve klasördeki
+  tüm mailler taranır.
 - `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz.
-- `Load Cases` butonuna basarak mailleri ayrıştırabilir, listeden vaka seçip detayları inceleyebilirsiniz.
+- `Load Cases` butonuna basarak mailleri ayrıştırabilir, listeden vaka seçip detayları inceleyebilirsiniz. Durum çubuğundaki
+  mesaj, kaç mail işlendiğini ve kaç benzersiz vaka bulunduğunu gösterir.
 
 ### Komut Satırı
 
@@ -55,7 +59,7 @@ python -m outlook_sidecar.cli --mode outlook --path "Inbox" --days 2
 
 - `--mode`: `outlook` (varsayılan) ya da `file`. `file` seçeneği, geliştirme amaçlı düz metin dosyalarını okur.
 - `--path`: Outlook klasör yolu (`Inbox/Alt Klasör` gibi) veya metin dosyasının yolu.
-- `--days`: Kaç günlük maillerin işleneceği. Boş bırakırsanız 2 gündür.
+- `--days`: Kaç günlük maillerin işleneceği. Boş bırakırsanız 2 gündür. `0` veya negatif verirseniz tarih filtresi uygulanmaz.
 - `--limit`: En fazla kaç mail okunacağını sınırlar.
 - `--json`: Çıktıyı JSON formatında üretir.
 

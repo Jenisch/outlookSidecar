@@ -8,6 +8,7 @@ from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 from typing import List
 
+from .aggregator import consolidate_cases
 from .email_reader import LocalMessageLoader, OutlookEmailReader
 from .models import CaseEntry, EmailMessage
 from .parser import CaseParser
@@ -144,7 +145,9 @@ class OutlookSidecarApp(tk.Tk):
                     case.source_subject = message.subject
                     case.received_at = message.received
                     parsed_cases.append(case)
-            self.after(0, lambda: self._update_cases(parsed_cases))
+
+            consolidated = consolidate_cases(parsed_cases)
+            self.after(0, lambda: self._update_cases(consolidated, len(messages)))
         except Exception as exc:  # pragma: no cover - GUI interaction
             self.after(0, lambda: self._handle_error(exc))
 
@@ -157,16 +160,22 @@ class OutlookSidecarApp(tk.Tk):
         if self.mode_var.get() == "file":
             loader = LocalMessageLoader(self.path_var.get())
             return list(loader.iter_messages())
+
         limit_value = self.limit_var.get().strip()
         limit = int(limit_value) if limit_value else None
+
+        restrict_days = self.days_var.get()
+        if restrict_days <= 0:
+            restrict_days = None
+
         reader = OutlookEmailReader(
             folder_path=self.path_var.get(),
-            restrict_days=self.days_var.get(),
+            restrict_days=restrict_days,
             limit=limit,
         )
         return list(reader.iter_messages())
 
-    def _update_cases(self, cases: List[CaseEntry]) -> None:
+    def _update_cases(self, cases: List[CaseEntry], message_count: int) -> None:
         self.cases = cases
         for item in self.case_tree.get_children():
             self.case_tree.delete(item)
@@ -186,10 +195,21 @@ class OutlookSidecarApp(tk.Tk):
             self.case_tree.selection_set("0")
             self.case_tree.focus("0")
             self._display_case_details(cases[0])
-            self.status_var.set(f"Loaded {len(cases)} case(s). Select a row to inspect details.")
+            message_note = (
+                f"Processed {message_count} Outlook message(s). Showing {len(cases)} unique case(s)."
+                if message_count
+                else f"Showing {len(cases)} case(s) from the provided file."
+            )
+            self.status_var.set(message_note + " Select a row to inspect details.")
         else:
             self._clear_details()
-            self.status_var.set("No cases found for the selected criteria.")
+            if message_count:
+                self.status_var.set(
+                    "Processed Outlook messages but no case identifiers were found. "
+                    "Confirm the folder and increase the day range if necessary."
+                )
+            else:
+                self.status_var.set("The selected file did not contain any recognizable cases.")
         self.load_button.state(["!disabled"])
 
     def _on_case_selected(self, event: tk.Event) -> None:  # pragma: no cover - GUI interaction

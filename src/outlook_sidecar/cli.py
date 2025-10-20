@@ -6,6 +6,7 @@ import argparse
 import json
 from typing import Iterator, List
 
+from .aggregator import consolidate_cases
 from .email_reader import LocalMessageLoader, OutlookEmailReader
 from .parser import CaseParser
 from .report import CaseReportBuilder
@@ -67,10 +68,12 @@ def main(argv: List[str] | None = None) -> int:
             case.received_at = message.received
             cases.append(case)
 
+    consolidated = consolidate_cases(cases)
+
     if args.json:
-        print(json.dumps([_case_to_dict(case) for case in cases], ensure_ascii=False, indent=2))
+        print(json.dumps([_case_to_dict(case) for case in consolidated], ensure_ascii=False, indent=2))
     else:
-        report = CaseReportBuilder().build(cases)
+        report = CaseReportBuilder().build(consolidated)
         print(report)
 
     return 0
