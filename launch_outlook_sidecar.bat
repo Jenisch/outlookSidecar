@@ -4,6 +4,8 @@ setlocal enabledelayedexpansion
 
 cd /d %~dp0
 
+set "PYTHONPATH=%~dp0src;%PYTHONPATH%"
+
 
 
 where py >nul 2>&1
