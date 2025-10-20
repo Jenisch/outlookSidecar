@@ -4,6 +4,7 @@ from .models import CaseEntry, FlightInfo, EmailMessage
 from .parser import CaseParser
 from .email_reader import OutlookEmailReader, LocalMessageLoader
 from .report import CaseReportBuilder
+from .gui import OutlookSidecarApp
 
 __all__ = [
     "CaseEntry",
@@ -13,4 +14,5 @@ __all__ = [
     "OutlookEmailReader",
     "LocalMessageLoader",
     "CaseReportBuilder",
+    "OutlookSidecarApp",
 ]

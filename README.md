@@ -1,6 +1,6 @@
 # outlookSidecar
 
-Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek için kullanılan bir komut satırı aracı.
+Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek için kullanılan masaüstü uygulaması.
 
 ## Özellikler
 
@@ -8,24 +8,42 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
 - Gövdesinde `25OA` ile başlayan dosya numaraları bulunan mailleri ayrıştırarak durum, başlık, detay ve uçuş bilgilerini çıkarır.
 - JSON veya biçimlendirilmiş metin halinde rapor üretir.
 - Geliştirme ve test için basit metin dosyalarından veri okuma imkânı sunar.
+- Outlook’a bağlanmaya gerek kalmadan aynı bilgileri içeren kullanıcı dostu bir arayüz sağlar.
 
 ## Kurulum
 
+### Hızlı Başlangıç (Windows)
+
+1. Python 3.10+ sürümünün sisteminizde kurulu olduğundan emin olun.
+2. Depoyu klonlayın ve proje klasörünü Windows gezgininde açın.
+3. `launch_outlook_sidecar.bat` dosyasına çift tıklayın. Dosya otomatik olarak `requirements.txt` içindeki bağımlılıkları
+   yükler ve ardından grafik arayüzünü başlatır.
+
+> **Not:** Betik, `py` komutunu bulamazsa `python` komutunu kullanarak sistemdeki varsayılan Python kurulumunu çağırır.
+
+### Manuel kurulum (geliştiriciler için)
+
 1. Python 3.10+ sürümünü kullanın.
-2. Windows üzerinde `pywin32` paketi yüklü olmalıdır:
+2. Depoyu klonlayın ve proje kök dizinine geçin.
+3. Paket bağımlılıklarını yüklemek için:
 
    ```bash
-   pip install pywin32
-   ```
-
-3. Depoyu klonlayın ve proje kök dizinine geçin.
-4. Paket bağımlılıklarını yüklemek için:
-
-   ```bash
+   pip install -r requirements.txt
    pip install -e .
    ```
 
 ## Kullanım
+
+### Grafik Arayüzü
+
+`launch_outlook_sidecar.bat` betiği çalıştırıldıktan sonra açılan arayüz üzerinden:
+
+- `Microsoft Outlook` seçeneği ile yerel Outlook kurulumuna bağlanabilir, klasör yolunu, kaç günlük veri alınacağını ve
+  isteğe bağlı mesaj limitini belirleyebilirsiniz.
+- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz.
+- `Load Cases` butonuna basarak mailleri ayrıştırabilir, listeden vaka seçip detayları inceleyebilirsiniz.
+
+### Komut Satırı
 
 Komut satırından çalıştırmak için:
 
@@ -33,7 +51,7 @@ Komut satırından çalıştırmak için:
 python -m outlook_sidecar.cli --mode outlook --path "Inbox" --days 2
 ```
 
-### Parametreler
+#### Parametreler
 
 - `--mode`: `outlook` (varsayılan) ya da `file`. `file` seçeneği, geliştirme amaçlı düz metin dosyalarını okur.
 - `--path`: Outlook klasör yolu (`Inbox/Alt Klasör` gibi) veya metin dosyasının yolu.
@@ -41,7 +59,7 @@ python -m outlook_sidecar.cli --mode outlook --path "Inbox" --days 2
 - `--limit`: En fazla kaç mail okunacağını sınırlar.
 - `--json`: Çıktıyı JSON formatında üretir.
 
-### Örnek
+#### Örnek
 
 Aşağıdaki komut, verilen metin dosyasından bir rapor üretir:
 
