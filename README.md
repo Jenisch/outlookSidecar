@@ -24,9 +24,9 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
 
 > **Not:** Betik, `py` komutunu bulamazsa `python` komutunu kullanarak sistemdeki varsayılan Python kurulumunu çağırır.
 
-> **İpucu:** PST/OST desteğinin kurulabilmesi için Microsoft Visual C++ Build Tools yüklü olmalıdır. Araçlar yoksa betik
-> uyarı verir ve program yine açılır; daha sonra araçları kurup `pip install libpff-python` komutunu çalıştırarak veri
-> dosyası desteğini etkinleştirebilirsiniz.
+> **İpucu:** PST/OST desteği için gereken Microsoft Visual C++ Build Tools eksikse betik resmi yükleyiciyi indirip sessiz
+> kurulumu başlatır ve ardından `libpff-python` paketini yeniden yüklemeyi dener. İşlem birkaç dakika sürebilir;
+> güvenlik politikaları yüklemeyi engellerse betik uyarı verir ve manuel kuruluma yönlendirir.
 
 ### Manuel kurulum (geliştiriciler için)
 
@@ -51,8 +51,9 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
   (paylaşılan posta kutuları dahil) tarar. Belirli bir posta kutusuna inmek için Outlook tarafındaki mağaza adını öne
   ekleyebilirsiniz (ör. `ops@company.com/Inbox/On Call`).
 - Gün aralığını `0` yaparsanız tarih filtresi devre dışı kalır ve klasördeki tüm mailler taranır.
-- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz. Outlook veri dosyalarını
-  (`.pst/.ost`) doğrudan içeri aktarmak için önce Microsoft Visual C++ Build Tools kurup şu komutu çalıştırın:
+- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz. Outlook veri dosyaları
+  (`.pst/.ost`) seçildiğinde betik gerekli araçları otomatik kurmayı ve `libpff-python` paketini yüklemeyi dener.
+  Güvenlik ya da ağ kısıtlamaları nedeniyle kurulum başarısız olursa aşağıdaki komutla manuel olarak tamamlayabilirsiniz:
 
   ```powershell
   pip install libpff-python
