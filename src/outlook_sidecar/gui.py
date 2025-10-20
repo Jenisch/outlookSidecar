@@ -62,7 +62,7 @@ class OutlookSidecarApp(tk.Tk):
         options_frame.pack(fill=tk.X)
 
         ttk.Label(options_frame, text="Recent days:").grid(row=0, column=0, sticky=tk.W)
-        self.days_spinbox = ttk.Spinbox(options_frame, from_=1, to=30, textvariable=self.days_var, width=5)
+        self.days_spinbox = ttk.Spinbox(options_frame, from_=0, to=90, textvariable=self.days_var, width=5)
         self.days_spinbox.grid(row=0, column=1, padx=(4, 12))
 
         ttk.Label(options_frame, text="Message limit (optional):").grid(row=0, column=2, sticky=tk.W)
@@ -123,7 +123,9 @@ class OutlookSidecarApp(tk.Tk):
         if is_file:
             self.status_var.set("Select a local text file that contains email content.")
         else:
-            self.status_var.set("Connects to the local Outlook client. Adjust folder, days, and limits as needed.")
+            self.status_var.set(
+                "Connects to the local Outlook client. Set 'Recent days' to 0 to scan the entire folder."
+            )
 
     def _browse_for_file(self) -> None:
         filename = filedialog.askopenfilename(title="Select email text file", filetypes=(("Text files", "*.txt"), ("All files", "*.*")))

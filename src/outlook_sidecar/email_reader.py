@@ -49,21 +49,32 @@ class OutlookEmailReader:
             cutoff = datetime.now() - timedelta(days=self.restrict_days)
 
         count = 0
-        for item in items:
+        item = items.GetFirst()
+        while item:
+            # ``Class`` 43 identifies mail items.  Other classes (meeting
+            # requests, tasks, etc.) do not expose ``Body``/``Subject`` in the
+            # same way and should be skipped.
+            item_class = getattr(item, "Class", None)
+            if item_class and int(item_class) != 43:
+                item = items.GetNext()
+                continue
+
             received_time = getattr(item, "ReceivedTime", None)
 
             if cutoff and received_time and received_time < cutoff:
                 break
 
             yield EmailMessage(
-                subject=str(item.Subject),
-                body=str(item.Body),
+                subject=str(getattr(item, "Subject", "")),
+                body=str(getattr(item, "Body", "")),
                 received=received_time if isinstance(received_time, datetime) else None,
             )
 
             count += 1
             if self.limit and count >= self.limit:
                 break
+
+            item = items.GetNext()
 
     def _resolve_namespace(self):  # type: ignore[override]
         spec = importlib.util.find_spec("win32com.client")
@@ -86,22 +97,32 @@ class OutlookEmailReader:
         folder = inbox
 
         if path_segments[0].lower() != "inbox":
-            root_names = [self._namespace.Folders.Item(i + 1).Name for i in range(self._namespace.Folders.Count)]
-            if path_segments[0] not in root_names:
+            roots = {}
+            for i in range(self._namespace.Folders.Count):
+                folder_obj = self._namespace.Folders.Item(i + 1)
+                roots[folder_obj.Name] = folder_obj
+            lookup = {name.lower(): name for name in roots}
+            first_segment = path_segments[0].lower()
+            if first_segment not in lookup:
                 raise ValueError(
-                    f"Could not find top-level folder '{path_segments[0]}'. Available: {', '.join(root_names)}"
+                    f"Could not find top-level folder '{path_segments[0]}'. Available: {', '.join(roots.keys())}"
                 )
-            folder = self._namespace.Folders[path_segments[0]]
+            folder = roots[lookup[first_segment]]
             path_segments = path_segments[1:]
         else:
             path_segments = path_segments[1:]
 
         for segment in path_segments:
-            child_names = [folder.Folders.Item(i + 1).Name for i in range(folder.Folders.Count)]
-            if segment not in child_names:
+            child_map = {}
+            for i in range(folder.Folders.Count):
+                child = folder.Folders.Item(i + 1)
+                child_map[child.Name] = child
+            lookup = {name.lower(): name for name in child_map}
+            segment_key = segment.lower()
+            if segment_key not in lookup:
                 raise ValueError(
-                    f"Folder '{segment}' not found under '{folder.Name}'. Available: {', '.join(child_names)}"
+                    f"Folder '{segment}' not found under '{folder.Name}'. Available: {', '.join(child_map.keys())}"
                 )
-            folder = folder.Folders[segment]
+            folder = child_map[lookup[segment_key]]
 
         return folder
