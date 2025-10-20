@@ -205,8 +205,8 @@ def _iter_pff_messages(path: str) -> Iterator[EmailMessage]:
         import pypff  # type: ignore[import]
     except ImportError as exc:  # pragma: no cover - exercised via tests using monkeypatch
         raise RuntimeError(
-            "Reading PST/OST files requires the optional 'pypff' dependency. "
-            "Install it with 'pip install pypff'."
+            "Reading PST/OST files requires the optional 'libpff-python' (pypff) dependency. "
+            "Install Visual C++ Build Tools and then run 'pip install libpff-python' to enable data-file support."
         ) from exc
 
     pst_file = pypff.file()

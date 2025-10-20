@@ -26,6 +26,15 @@ if %errorlevel%==0 (
 
 %PYTHON% -m pip install -r requirements.txt
 
+echo.
+echo [Outlook Sidecar] Checking optional PST/OST support...
+%PYTHON% -m pip install libpff-python>=20231205
+if %errorlevel% neq 0 (
+    echo.
+    echo [Warning] libpff-python could not be installed automatically.
+    echo Install Microsoft Visual C++ Build Tools, then run: pip install libpff-python
+)
+
 %PYTHON% -m outlook_sidecar.gui
 
 

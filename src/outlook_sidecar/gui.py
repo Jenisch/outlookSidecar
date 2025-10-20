@@ -151,7 +151,7 @@ class OutlookSidecarApp(tk.Tk):
             consolidated = consolidate_cases(parsed_cases)
             self.after(0, lambda: self._update_cases(consolidated, len(messages)))
         except Exception as exc:  # pragma: no cover - GUI interaction
-            self.after(0, lambda: self._handle_error(exc))
+            self.after(0, lambda error=exc: self._handle_error(error))
 
     def _handle_error(self, exc: Exception) -> None:
         self.status_var.set("Failed to load cases.")

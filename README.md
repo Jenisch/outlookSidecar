@@ -18,10 +18,15 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
 
 1. Python 3.10+ sürümünün sisteminizde kurulu olduğundan emin olun.
 2. Depoyu klonlayın ve proje klasörünü Windows gezgininde açın.
-3. `launch_outlook_sidecar.bat` dosyasına çift tıklayın. Dosya otomatik olarak `requirements.txt` içindeki bağımlılıkları
-   yükler ve ardından grafik arayüzünü başlatır.
+3. `launch_outlook_sidecar.bat` dosyasına çift tıklayın. Betik önce `requirements.txt` içindeki temel bağımlılıkları,
+   ardından da mevcutsa PST/OST desteği için isteğe bağlı `libpff-python` paketini yüklemeye çalışır ve grafik arayüzünü
+   başlatır.
 
 > **Not:** Betik, `py` komutunu bulamazsa `python` komutunu kullanarak sistemdeki varsayılan Python kurulumunu çağırır.
+
+> **İpucu:** PST/OST desteğinin kurulabilmesi için Microsoft Visual C++ Build Tools yüklü olmalıdır. Araçlar yoksa betik
+> uyarı verir ve program yine açılır; daha sonra araçları kurup `pip install libpff-python` komutunu çalıştırarak veri
+> dosyası desteğini etkinleştirebilirsiniz.
 
 ### Manuel kurulum (geliştiriciler için)
 
@@ -46,10 +51,15 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
   (paylaşılan posta kutuları dahil) tarar. Belirli bir posta kutusuna inmek için Outlook tarafındaki mağaza adını öne
   ekleyebilirsiniz (ör. `ops@company.com/Inbox/On Call`).
 - Gün aralığını `0` yaparsanız tarih filtresi devre dışı kalır ve klasördeki tüm mailler taranır.
-- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz. Eğer Outlook veri dosyalarını
-  (`.pst/.ost`) doğrudan içeri aktarmak istiyorsanız Windows için kurulum sırasında `libpff-python` paketinin yüklenmiş
-  olması ve Outlook uygulamasının kapalı bulunması gerekir; aksi halde dosya kilitli olduğundan okuma işlemi başarısız
-  olur.
+- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz. Outlook veri dosyalarını
+  (`.pst/.ost`) doğrudan içeri aktarmak için önce Microsoft Visual C++ Build Tools kurup şu komutu çalıştırın:
+
+  ```powershell
+  pip install libpff-python
+  ```
+
+  Ardından Outlook uygulamasını kapatıp veri dosyasını seçerek içeri aktarabilirsiniz; açık Outlook pencereleri dosyayı
+  kilitlediği için okuma işlemi başarısız olur.
 - `Load Cases` butonuna basarak mailleri ayrıştırabilir, listeden vaka seçip detayları inceleyebilirsiniz. Durum çubuğundaki
   mesaj, kaç mail işlendiğini ve kaç benzersiz vaka bulunduğunu gösterir.
 
