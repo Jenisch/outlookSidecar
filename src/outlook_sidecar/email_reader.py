@@ -6,26 +6,23 @@ import importlib
 import importlib.util
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Iterable, Iterator, List, Optional
+from typing import Iterable, Iterator, List, Optional, Sequence
 
 from .models import EmailMessage
 
 
 @dataclass(slots=True)
 class LocalMessageLoader:
-    """Simple loader that reads message bodies from local text files."""
+    """Loader that reads message bodies from a local export."""
 
     path: str
 
     def iter_messages(self) -> Iterator[EmailMessage]:
-        try:
-            with open(self.path, "r", encoding="utf-8") as handler:
-                yield EmailMessage(subject=self.path, body=handler.read())
-        except PermissionError as exc:
-            raise PermissionError(
-                "Unable to read the selected file. If this is an Outlook PST/OST file, "
-                "close Outlook and export the required emails to a text file instead."
-            ) from exc
+        lower_path = self.path.lower()
+        if lower_path.endswith((".pst", ".ost")):
+            yield from _iter_pff_messages(self.path)
+        else:
+            yield from _iter_text_file(self.path)
 
 
 class OutlookEmailReader:
@@ -190,3 +187,102 @@ def _walk_segments(folder, segments: List[str]):
         current = child_map[lookup[segment_key]]
 
     return current
+
+
+def _iter_text_file(path: str) -> Iterator[EmailMessage]:
+    try:
+        with open(path, "r", encoding="utf-8") as handler:
+            yield EmailMessage(subject=path, body=handler.read())
+    except PermissionError as exc:
+        raise PermissionError(
+            "Unable to read the selected file. If this is an Outlook PST/OST file, "
+            "close Outlook before trying again."
+        ) from exc
+
+
+def _iter_pff_messages(path: str) -> Iterator[EmailMessage]:
+    try:
+        import pypff  # type: ignore[import]
+    except ImportError as exc:  # pragma: no cover - exercised via tests using monkeypatch
+        raise RuntimeError(
+            "Reading PST/OST files requires the optional 'pypff' dependency. "
+            "Install it with 'pip install pypff'."
+        ) from exc
+
+    pst_file = pypff.file()
+    try:
+        pst_file.open(path)
+    except PermissionError:
+        raise PermissionError(
+            "Unable to open the Outlook data file. Close Outlook and make sure the PST/OST is not read-only."
+        )
+    except Exception as exc:  # pragma: no cover - defensive against libpff errors
+        raise RuntimeError(f"Failed to open Outlook data file: {exc}") from exc
+
+    try:
+        root_folder = pst_file.get_root_folder()
+        messages = list(_walk_pff_folder(root_folder))
+    finally:
+        pst_file.close()
+
+    messages.sort(key=lambda msg: msg.received or datetime.min, reverse=True)
+
+    for message in messages:
+        yield message
+
+
+def _walk_pff_folder(folder) -> Iterator[EmailMessage]:
+    for index in range(_safe_count(folder.get_number_of_sub_folders)):
+        sub_folder = folder.get_sub_folder(index)
+        yield from _walk_pff_folder(sub_folder)
+
+    for index in range(_safe_count(folder.get_number_of_messages)):
+        message = folder.get_message(index)
+        try:
+            yield _convert_pff_message(message)
+        finally:
+            if hasattr(message, "close"):
+                try:
+                    message.close()
+                except Exception:
+                    pass
+
+
+def _safe_count(counter) -> int:
+    try:
+        return int(counter())
+    except TypeError:
+        return int(counter)
+
+
+def _convert_pff_message(message) -> EmailMessage:
+    subject = _call_pff(message, ["get_subject", "subject"]) or ""
+    body_candidates: Sequence[str] = (
+        _call_pff(message, ["get_plain_text_body", "plain_text_body"]) or "",
+        _call_pff(message, ["get_html_body", "html_body"]) or "",
+        _call_pff(message, ["get_rtf_body", "rtf_body"]) or "",
+    )
+    body = next((candidate for candidate in body_candidates if candidate), "")
+
+    received = _call_pff(
+        message,
+        ["get_delivery_time", "delivery_time", "get_client_submit_time", "client_submit_time", "get_creation_time", "creation_time"],
+    )
+    if received and not isinstance(received, datetime):
+        received = None
+
+    return EmailMessage(subject=str(subject), body=str(body), received=received)
+
+
+def _call_pff(obj, attribute_names: Sequence[str]):
+    for name in attribute_names:
+        attribute = getattr(obj, name, None)
+        if attribute is None:
+            continue
+        if callable(attribute):
+            value = attribute()
+        else:
+            value = attribute
+        if value:
+            return value
+    return None

@@ -46,8 +46,10 @@ Yerel Outlook kurulumundaki operasyon maillerinden güncel icap raporu üretmek 
   (paylaşılan posta kutuları dahil) tarar. Belirli bir posta kutusuna inmek için Outlook tarafındaki mağaza adını öne
   ekleyebilirsiniz (ör. `ops@company.com/Inbox/On Call`).
 - Gün aralığını `0` yaparsanız tarih filtresi devre dışı kalır ve klasördeki tüm mailler taranır.
-- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz. Outlook veri dosyaları
-  (`.pst/.ost`) Outlook açıkken kilitli olduğu için doğrudan okunamaz; önce ilgili içerikleri metin dosyasına aktarın.
+- `Local Text File` seçeneğiyle düz metin dosyalarını seçerek hızlıca test yapabilirsiniz. Eğer Outlook veri dosyalarını
+  (`.pst/.ost`) doğrudan içeri aktarmak istiyorsanız Windows için kurulum sırasında `libpff-python` paketinin yüklenmiş
+  olması ve Outlook uygulamasının kapalı bulunması gerekir; aksi halde dosya kilitli olduğundan okuma işlemi başarısız
+  olur.
 - `Load Cases` butonuna basarak mailleri ayrıştırabilir, listeden vaka seçip detayları inceleyebilirsiniz. Durum çubuğundaki
   mesaj, kaç mail işlendiğini ve kaç benzersiz vaka bulunduğunu gösterir.
 
